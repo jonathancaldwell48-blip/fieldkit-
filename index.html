@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17191b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Field Kit">
+<title>Iron Nest Field Kit</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--bg:#17191b;--pl:#25282b;--ln:#585d60;--tx:#e2decf;--dm:#8c9094;--am:#f0b04a;--rs:#a24f1f;--in:#0f1011}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background-color:var(--bg);background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:6px 6px;color:var(--tx);font:16px/1.35 Consolas,"Courier New",monospace;padding-top:env(safe-area-inset-top)}
+header{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--in);border-bottom:3px solid var(--rs)}
+header b{font-size:17px}
+#st{flex:1;font-size:12px;color:var(--dm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button{font:inherit;color:var(--tx);background:#43474a;border:0;border-bottom:4px solid #0a0a0b;padding:8px 12px;min-height:44px}
+button:active{border-bottom-width:1px;transform:translateY(3px)}
+main{flex:1;overflow:auto;padding:10px}
+nav{display:flex;border-top:3px solid var(--ln);background:var(--in);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border-bottom:0;background:none;font-size:17px}
+nav button.on{background:#2f3336;box-shadow:inset 0 3px var(--am)}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--in);border:1px solid #3b3f42;padding:8px;width:100%;min-width:0;border-radius:0}
+label{display:block;font-size:12px;color:var(--dm)}
+.dim{color:var(--dm)}
+.screen{padding:14px;overflow:auto;height:100%}
+.screen textarea{height:120px;margin:6px 0 14px}
+.screen h1{font-size:20px;margin:0 0 12px}
+.row{display:flex;gap:6px;margin:6px 0 14px}
+.memo{border:2px solid var(--ln);background:var(--pl);padding:8px 10px;margin-bottom:10px}
+.memo .w{margin-top:6px;border:2px solid var(--rs);padding:4px 8px;color:var(--am);font-weight:bold}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.card{border:2px solid var(--ln);background:var(--pl);padding:8px;margin-bottom:10px;display:grid;gap:8px}
+.top{display:flex;gap:8px;align-items:end}
+.top label{flex:1}
+.top input{font-size:20px;font-weight:bold}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cks{display:flex;gap:14px;align-items:center}
+.ck{display:flex;align-items:center;gap:6px;font-size:16px;color:var(--tx)}
+.ck input{width:24px;height:24px;padding:0}
+.card.rd{background:#6b5313;border-color:var(--am)}
+.card.fd{background:#1f2021;color:var(--dm)}
+.card.fd input:not([type=checkbox]){text-decoration:line-through;color:var(--dm)}
+.card.cf{background:#7d7016;border-color:#e8d43a}
+.card.rm{background:#7a2a24;border-color:#e0604a}
+.note{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.paper{position:relative;height:60vh;min-height:300px;background:#d9d3bd;border:2px solid var(--ln)}
+.paper textarea,.paper canvas{position:absolute;inset:0;width:100%;height:100%}
+.paper textarea{background:none;border:0;color:#1a1a1a;font-size:18px;resize:none;padding:10px}
+.paper canvas{pointer-events:none}
+.paper.dr canvas{pointer-events:auto;touch-action:none}
+.sw{width:44px;padding:0;border:2px solid var(--tx)}
+#disp{background:var(--in);border:2px solid #0a0a0b;padding:8px 10px;margin-bottom:10px;text-align:right}
+#ce{min-height:24px;color:var(--dm);word-break:break-all}
+#cr{font-size:40px;color:var(--am);font-weight:bold;overflow:hidden}
+#keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#keys button{height:64px;font-size:26px;border-bottom-width:5px}
+#keys .op{background:#9a4e1c}
+#keys .eq{background:#d9772b;color:#0f0f10}
+#keys .cl{background:#a32a20}
+#keys .fn{background:#4b5636}
+#hist{margin-top:10px;color:var(--dm);font-size:14px}
+</style></head><body>
+
+<div id="setup" class="screen" hidden>
+<h1>Iron Nest Field Kit</h1>
+<label>Firebase config: paste the whole block from Firebase project settings</label>
+<textarea id="cfg" placeholder='const firebaseConfig = { apiKey: "...", projectId: "...", ... }'></textarea>
+<label>Room code: share the same code with your partner</label>
+<div class="row"><input id="room" autocapitalize="none" autocomplete="off"><button id="newroom">New room</button></div>
+<button id="go">Open</button>
+<p class="dim">Anyone with the room code can read and edit this room. Use New room for a long random code.</p>
+</div>
+
+<div id="app" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+<header><b>Iron Nest</b><span id="st"></span><button id="share">Share</button><button id="roomb">Room</button></header>
+<main>
+<section id="p-t">
+<div class="memo"><div>Elevation = (Range × 12) ÷ Charge</div><div class="w">1 Charge = up to 5 km</div></div>
+<div class="tools"><button id="add">Add target</button><button id="undo">Undo merge</button></div>
+<div id="rows"></div>
+</section>
+<section id="p-n" hidden>
+<div class="tools">
+<button id="draw">Draw</button>
+<button class="sw" data-c="#16181a" style="background:#16181a"></button>
+<button class="sw" data-c="#b32020" style="background:#b32020"></button>
+<button class="sw" data-c="#1f3fa8" style="background:#1f3fa8"></button>
+<button id="ud">Undo stroke</button><button id="ci">Clear ink</button>
+</div>
+<div class="paper"><textarea id="nt" placeholder="Notes, shared with your partner"></textarea><canvas id="cv"></canvas></div>
+</section>
+<section id="p-c" hidden>
+<div id="disp"><div id="ce"> </div><div id="cr">0</div></div>
+<div id="keys"></div>
+<div id="hist"></div>
+</section>
+</main>
+<nav><button class="on" data-p="t">Targets</button><button data-p="n">Notes</button><button data-p="c">Calc</button></nav>
+</div>
+
+<script type="module">
+const $=s=>document.querySelector(s),LS=localStorage;
+const rid=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return[...a].map(x=>'abcdefghijkmnpqrstuvwxyz23456789'[x%32]).join('')};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s||'').trim().toUpperCase();
+const AMMO=['HE','AP','APHE','ATMC','CLMN','CYAN','DRIL','EQKE','FLCH','HCHE','INCN','LE','PCLM','PHGN','PRPG','SMK','STAR','TEAR','THRM','WP'];
+const TF=['id','bearing','range','charge','elev','round'],BF=['gun1','gun2','ready','fired'];
+let cfg=JSON.parse(LS.cfg||'null'),room=LS.room||'',me=LS.me||(LS.me=rid(8)),fs=null,B={rows:[],tombs:{}},pend=false,lastSnap=0;
+if(location.hash.startsWith('#k=')){try{const k=JSON.parse(atob(decodeURIComponent(location.hash.slice(3))));LS.cfg=JSON.stringify(k.c);LS.room=k.r;cfg=k.c;room=k.r}catch{}history.replaceState(null,'',location.pathname)}
+const setSt=t=>$('#st').textContent=t;
+const save=()=>LS['b_'+room]=JSON.stringify(B);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---------- setup ---------- */
+$('#newroom').onclick=()=>$('#room').value=rid(20);
+$('#go').onclick=()=>{
+  const t=$('#cfg').value;
+  if(t.trim()){const o={};[...t.matchAll(/(\w+)\s*:\s*["']([^"']*)["']/g)].forEach(m=>o[m[1]]=m[2]);
+    if(!o.apiKey||!o.projectId){alert('That is not a Firebase config. Copy the whole block from Firebase project settings.');return}
+    LS.cfg=JSON.stringify(o);cfg=o}
+  if(!cfg){alert('Paste the Firebase config first.');return}
+  const r=$('#room').value.trim().toLowerCase();
+  if(!/^[a-z0-9_-]{10,}$/.test(r)){alert('Room code needs 10 or more letters, numbers, - or _. Tap New room for a safe one.');return}
+  LS.room=r;location.reload()};
+$('#roomb').onclick=()=>{$('#app').hidden=true;$('#setup').hidden=false;$('#room').value=room};
+$('#share').onclick=async()=>{
+  const u=location.origin+location.pathname+'#k='+encodeURIComponent(btoa(JSON.stringify({c:cfg,r:room})));
+  try{await navigator.clipboard.writeText(u);setSt('Invite link copied')}catch{prompt('Send this link to your partner:',u)}};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  ['t','n','c'].forEach(k=>$('#p-'+k).hidden=k!==b.dataset.p)});
+
+/* ---------- target board ---------- */
+const mkRow=()=>({uid:rid(12),id:'',bearing:'',range:'',charge:'',elev:'',round:'',gun1:false,gun2:false,ready:false,fired:false,stamp:0,base:0,dirty:false,conflict:false,removed:false});
+const mk=(d,uid)=>({...mkRow(),uid:uid||d.uid,id:d.id,bearing:d.bearing,range:d.range,charge:d.charge,elev:d.elev,round:d.round,gun1:!!d.gun1,gun2:!!d.gun2,ready:!!d.ready,fired:!!d.fired,stamp:d.stamp,base:d.stamp});
+const same=(a,d)=>TF.every(f=>f==='id'?norm(a.id)===norm(d.id):String(a[f]||'').trim()===String(d[f]||'').trim())&&BF.every(f=>!!a[f]===!!d[f]);
+const sameId=d=>B.rows.filter(r=>norm(r.id)===norm(d.id));
+const cls=r=>'card'+(r.removed?' rm':r.conflict?' cf':r.fired?' fd':r.ready?' rd':'');
+const ref=(...p)=>fs.doc(fs.db,'rooms',room,...p);
+
+function touch(r){r.stamp=Math.max(Date.now(),(r.stamp||0)+1);r.dirty=true;send(r);save()}
+function send(r){
+  if(!fs||!norm(r.id)||r.removed)return;const st=r.stamp;
+  fs.setDoc(ref('rows',r.uid),{id:r.id,bearing:r.bearing,range:r.range,charge:r.charge,elev:r.elev,round:r.round,gun1:!!r.gun1,gun2:!!r.gun2,ready:!!r.ready,fired:!!r.fired,stamp:st,by:me})
+   .then(()=>{if(r.stamp===st){r.dirty=false;r.base=st;save()}}).catch(()=>{})}
+const sendTomb=(uid,silent)=>fs&&fs.setDoc(ref('tombs',uid),{silent,by:me,stamp:Date.now()}).catch(()=>{});
+function drop(l){B.rows=B.rows.filter(r=>r!==l);const n=sameId(l);if(n.length<2)n.forEach(r=>r.conflict=false)}
+function twin(d,uid){
+  if(B.rows.some(r=>same(r,d)))return;
+  const t=mk(d,uid);t.conflict=true;sameId(d).forEach(r=>r.conflict=true);B.rows.push(t)}
+function merge(d){
+  if(!norm(d.id)||B.tombs[d.uid])return;
+  const l=B.rows.find(r=>r.uid===d.uid);
+  if(l){
+    if(same(l,d)){l.base=d.stamp;l.dirty=false;return}
+    if(!l.dirty){Object.assign(l,mk(d,l.uid),{conflict:l.conflict,removed:false});return}
+    if(d.stamp<=l.base)return;
+    twin(d,d.uid+'x'+d.stamp);return}
+  const c=sameId(d),m=c.find(r=>same(r,d));
+  if(m){m.uid=d.uid;m.base=d.stamp;m.dirty=false;return}
+  if(c.length)twin(d,d.uid);else B.rows.push(mk(d))}
+function tomb(t){
+  const l=B.rows.find(r=>r.uid===t.uid);if(!l)return;
+  if(t.silent){if(l.conflict){B.tombs[l.uid]=1;drop(l)}}else l.removed=true}
+function backup(){if(Date.now()-lastSnap>20000){LS.undo=JSON.stringify(B);lastSnap=Date.now()}}
+
+const inp=(r,f,t,m)=>`<label>${t}<input data-f="${f}" value="${esc(r[f])}" autocomplete="off"${m?` inputmode="${m}"`:''}></label>`;
+const chk=(r,f,t)=>`<label class="ck"><input type="checkbox" data-f="${f}"${r[f]?' checked':''}>${t}</label>`;
+const card=r=>`<div class="${cls(r)}" data-u="${r.uid}">
+<div class="top">${inp(r,'id','Target ID')}<button data-a="del" title="Delete on my board only">✕</button></div>
+<div class="g">${inp(r,'bearing','Bearing','decimal')}${inp(r,'range','Range','decimal')}${inp(r,'charge','Charge','decimal')}${inp(r,'elev','Elevation','decimal')}</div>
+<div class="g"><label>Round<select data-f="round"><option></option>${AMMO.map(a=>`<option${r.round===a?' selected':''}>${a}</option>`).join('')}${r.round&&!AMMO.includes(r.round)?`<option selected>${esc(r.round)}</option>`:''}</select></label>
+<div class="cks">${chk(r,'gun1','Gun 1')}${chk(r,'gun2','Gun 2')}</div></div>
+<div class="cks">${chk(r,'ready','Ready')}${chk(r,'fired','Fired')}</div>
+${r.conflict?'<div class="note">Same ID, different data. <button data-a="keep">Keep this one</button></div>':''}
+${r.removed?'<div class="note">Partner deleted this. <button data-a="clear">Clear</button></div>':''}</div>`;
+function render(){
+  const a=document.activeElement;
+  if($('#rows').contains(a)&&/INPUT|SELECT/.test(a.tagName)){pend=true;return}
+  pend=false;
+  $('#rows').innerHTML=B.rows.length?B.rows.map(card).join(''):'<p class="dim">No targets yet. Tap Add target.</p>'}
+$('#rows').addEventListener('change',e=>{
+  const c=e.target.closest('.card'),f=e.target.dataset.f;if(!c||!f)return;
+  const r=B.rows.find(x=>x.uid===c.dataset.u);if(!r)return;
+  r[f]=e.target.type==='checkbox'?e.target.checked:e.target.value;touch(r);c.className=cls(r)});
+$('#rows').addEventListener('focusout',()=>{if(pend)setTimeout(render,0)});
+$('#rows').addEventListener('click',e=>{
+  const a=e.target.dataset.a;if(!a)return;
+  const r=B.rows.find(x=>x.uid===e.target.closest('.card').dataset.u);if(!r)return;
+  if(a==='del'){
+    if(norm(r.id)){if(!confirm('Delete this row on your board only? Your partner keeps it, shown in red.'))return;B.tombs[r.uid]=1;sendTomb(r.uid,false)}
+    drop(r)}
+  if(a==='clear'){B.tombs[r.uid]=1;drop(r)}
+  if(a==='keep'){
+    B.rows.filter(x=>x!==r&&norm(x.id)===norm(r.id)&&x.conflict).forEach(x=>{B.tombs[x.uid]=1;sendTomb(x.uid,true);drop(x)});
+    r.conflict=false;touch(r)}
+  save();render()});
+$('#add').onclick=()=>{B.rows.unshift(mkRow());save();render();const i=$('#rows input');if(i)i.focus()};
+$('#undo').onclick=()=>{if(!LS.undo)return;B=JSON.parse(LS.undo);LS.undo='';save();render();setSt('Merge undone')};
+
+/* ---------- notes + drawing ---------- */
+const nt=$('#nt'),cv=$('#cv'),cx=cv.getContext('2d');
+let S=new Map(),col='#16181a',cur=null,mine=[],nTimer;
+function redraw(){
+  const w=cv.width,h=cv.height;cx.clearRect(0,0,w,h);cx.lineCap=cx.lineJoin='round';
+  S.forEach(s=>{cx.strokeStyle=s.c;cx.lineWidth=2.5*devicePixelRatio;cx.beginPath();
+    for(let i=0;i<s.p.length;i+=2){const x=s.p[i]*w/1000,y=s.p[i+1]*h/1000;i?cx.lineTo(x,y):cx.moveTo(x,y)}
+    if(s.p.length===2)cx.lineTo(s.p[0]*w/1000+.1,s.p[1]*h/1000);cx.stroke()})}
+new ResizeObserver(()=>{cv.width=cv.clientWidth*devicePixelRatio;cv.height=cv.clientHeight*devicePixelRatio;redraw()}).observe(cv);
+const pt=e=>{const r=cv.getBoundingClientRect();return[Math.round((e.clientX-r.left)/r.width*1000),Math.round((e.clientY-r.top)/r.height*1000)]};
+cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);cur={c:col,p:pt(e)};S.set('_cur',cur);redraw()};
+cv.onpointermove=e=>{if(!cur)return;cur.p.push(...pt(e));redraw()};
+cv.onpointerup=cv.onpointercancel=()=>{
+  if(!cur)return;S.delete('_cur');const id=rid(12);S.set(id,cur);mine.push(id);redraw();
+  if(fs)fs.setDoc(ref('strokes',id),{c:cur.c,p:cur.p,by:me,t:Date.now()}).catch(()=>{});cur=null};
+$('#draw').onclick=e=>{e.target.textContent=$('.paper').classList.toggle('dr')?'Type':'Draw'};
+document.querySelectorAll('.sw').forEach(b=>b.onclick=()=>{col=b.dataset.c;$('.paper').classList.add('dr');$('#draw').textContent='Type'});
+$('#ud').onclick=()=>{const id=mine.pop();if(!id)return;S.delete(id);redraw();if(fs)fs.deleteDoc(ref('strokes',id)).catch(()=>{})};
+$('#ci').onclick=()=>{if(!confirm('Erase all ink for you and your partner?'))return;[...S.keys()].forEach(id=>{S.delete(id);if(fs)fs.deleteDoc(ref('strokes',id)).catch(()=>{})});mine=[];redraw()};
+nt.oninput=()=>{LS['n_'+room]=nt.value;clearTimeout(nTimer);
+  nTimer=setTimeout(()=>{if(fs)fs.setDoc(ref('notes','text'),{text:nt.value,by:me,t:Date.now()}).catch(()=>{})},700)};
+
+/* ---------- calculator ---------- */
+function calc(s){
+  s=s.replace(/\s+/g,'').replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');let i=0;
+  const E=()=>{let v=T();for(;;){if(s[i]==='+'){i++;v+=T()}else if(s[i]==='-'){i++;v-=T()}else return v}};
+  const T=()=>{let v=U();for(;;){if(s[i]==='*'){i++;v*=U()}else if(s[i]==='/'){i++;v/=U()}else return v}};
+  const U=()=>{
+    if(s[i]==='-'){i++;return-U()}if(s[i]==='+'){i++;return U()}
+    if(s[i]==='('){i++;const v=E();if(s[i++]!==')')throw 1;return v}
+    const m=/^(\d+\.?\d*|\.\d+)/.exec(s.slice(i));if(!m)throw 1;i+=m[0].length;return parseFloat(m[0])};
+  const v=E();if(i<s.length||!isFinite(v))throw 1;return v}
+const fmt=v=>String(parseFloat(v.toPrecision(12)));
+let ex='',ans=0;const hist=[];
+const KEYS=[['C','cl'],['(','fn'],[')','fn'],['÷','op'],['7'],['8'],['9'],['×','op'],['4'],['5'],['6'],['−','op'],['1'],['2'],['3'],['+','op'],['0'],['.'],['⌫','fn'],['=','eq']];
+$('#keys').innerHTML=KEYS.map(k=>`<button data-k="${k[0]}"${k[1]?` class="${k[1]}"`:''}>${k[0]}</button>`).join('');
+$('#keys').onclick=e=>{
+  const k=e.target.dataset.k;if(!k)return;
+  if(k==='C'){ex='';$('#cr').textContent='0'}
+  else if(k==='⌫')ex=ex.slice(0,-1);
+  else if(k==='='){
+    try{let s=ex;if(/^[*/+×÷]/.test(s))s=ans+s;const v=calc(s);ans=v;$('#cr').textContent=fmt(v);
+      hist.unshift(ex+' = '+fmt(v));hist.length=Math.min(hist.length,6);$('#hist').innerHTML=hist.map(esc).join('<br>');ex=''}
+    catch{$('#cr').textContent='Error'}}
+  else ex+=k;
+  $('#ce').textContent=ex||' '};
+
+/* ---------- sync ---------- */
+function listen(){
+  const err=e=>setSt('Error: '+(e.code||e.message)+(e.code==='permission-denied'?'. Check the Firestore rules.':''));
+  fs.onSnapshot(fs.collection(fs.db,'rooms',room,'rows'),{includeMetadataChanges:true},s=>{
+    setSt(s.metadata.fromCache?'Offline. Saved on this phone.':'Live. Room '+room.slice(0,4)+'…');
+    const ch=s.docChanges().filter(c=>c.type!=='removed'&&!c.doc.metadata.hasPendingWrites);
+    if(!ch.length)return;backup();
+    ch.forEach(c=>{const d={...c.doc.data(),uid:c.doc.id};if(d.by===me&&B.rows.some(r=>r.uid===d.uid))return;merge(d)});
+    save();render()},err);
+  fs.onSnapshot(fs.collection(fs.db,'rooms',room,'tombs'),s=>{
+    s.docChanges().forEach(c=>{if(c.type==='removed'||c.doc.metadata.hasPendingWrites)return;const t=c.doc.data();if(t.by!==me)tomb({...t,uid:c.doc.id})});
+    save();render()},err);
+  fs.onSnapshot(fs.collection(fs.db,'rooms',room,'strokes'),s=>{
+    s.docChanges().forEach(c=>{if(c.type==='removed')S.delete(c.doc.id);else{const d=c.doc.data();S.set(c.doc.id,{c:d.c,p:d.p})}});redraw()},err);
+  fs.onSnapshot(ref('notes','text'),s=>{
+    const d=s.data();
+    if(d&&d.by!==me&&document.activeElement!==nt&&!s.metadata.hasPendingWrites){nt.value=d.text;LS['n_'+room]=d.text}},err);
+  B.rows.filter(r=>r.dirty).forEach(send)}
+
+async function boot(){
+  B=JSON.parse(LS['b_'+room]||'{"rows":[],"tombs":{}}');
+  $('#setup').hidden=true;$('#app').hidden=false;
+  nt.value=LS['n_'+room]||'';render();setSt('Connecting…');
+  try{
+    const V='https://www.gstatic.com/firebasejs/10.12.2/';
+    const [A,F]=await Promise.all([import(V+'firebase-app.js'),import(V+'firebase-firestore.js')]);
+    const app=A.initializeApp(cfg);
+    const db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})});
+    fs={db,collection:F.collection,doc:F.doc,setDoc:F.setDoc,deleteDoc:F.deleteDoc,onSnapshot:F.onSnapshot};
+    listen()}
+  catch(e){setSt('Working offline: '+(e.message||e))}}
+
+if(cfg&&/^[a-z0-9_-]{10,}$/.test(room))boot();
+else{$('#setup').hidden=false;$('#room').value=room}
+</script>
+</body></html>
